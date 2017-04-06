@@ -1,0 +1,95 @@
+Distributed Systems: Assignment 2 Fall 2016
+Sakib Jalal (sfj19), Nathan Miniovich (nm540), Tanya Balaraju (tb463), Aditya Geria (aag177)
+
+
+===============================
+compiling and running the code:
+
+0. Make sure your CLASSPATH environment variable contains
+   the root project directory, root/airports, and root/places.
+   Make sure that CLASSPATH is SET IN EACH OF THE THREE WINDOWS
+   that you'll be using and that it is exported.
+   For example:
+
+    export CLASSPATH=$CLASSPATH:$HOME/distributed:$HOME/distributed/airports:$HOME/distributed/places
+
+   To be sure,
+    echo $CLASSPATH
+
+   The shell environment commands assume that you are using a shell
+   such as sh, bash, or ksh. If you are using csh or tcsh, you'll have
+   to use the setenv command - check the documentation for those shells.
+
+1. Compile the code
+    make
+
+2. In one window (or in the background), start the registry:
+       rmiregistry
+  By default rmiregistry listens on port 1099.  This port is likely
+  to be in use if you are on a shared machine.
+  To run it on another port specify the port number on the command
+  line. For example:
+       rmiregistry 23123
+
+3. start the servers in other windows (or in the background)
+       java -Djava.security.policy=policy PlaceServer 23123
+       java -Djava.security.policy=policy AirportServer 23123
+   where the last argument is the port number of the rmi registry
+
+4. run the client in yet another window:
+       java Client -hp localhost -pp 23123 -ha localhost -pa 23123 Princeton NJ
+       java Client Princeton NJ
+   where host and port specifications are optional. The defaults are
+   localhost and 1099, respectively, for both airports and placeservers.
+   -hp refers to the host for the place server.
+   -pp refers to the port for the place server.
+   -ha refers to the host for the airport server.
+   -pa refers to the post for the airport server.
+
+5. try the test cases out.
+
+===============================
+bugs and peculiarities
+
+1. If you set two host arguments, it will set the host to the last one.
+    Same thing for port arguments.
+
+2. The distances print out as un-rounded doubles in miles.
+    We noticed on the assignment description that NXX was closer than
+    NEL to Princeton NJ, but this is egregiously false, as without rounding,
+    we find that NEL is over half a mile closer.
+
+===============================
+implementation: DS & A
+
+In Places.java we use a generic list to store place data on program startup.
+When a lookup request is received, we do a linear search through the list to
+locate the requested data and return it as a formatted string.
+
+In Airports.java we first make a list of Airports by pulling the data from
+a protobuf message. We then map the Airport list to a list of Airport nodes
+which contains airport code and distance data (distance being the distance
+from the requested lat/long). We then do a linear search through the node list
+5 times in order to find the minimum distance each time. This gives us an
+O(5n) linear lookup upon each request for airports. When one iteration
+finishes, we remove the lowest distance node from the list so that the next
+iteration can finish correctly. The five chosen airports are then found in
+the main Airport list and the data is sent back to the client as a string array.
+
+===============================
+troubleshooting
+
+1. starting rmiregistry
+
+rmiregistry binds to port 1099 by default. If this port is in use,
+perhaps by another rmiregistry, you can start the rmiregistry
+on another port. For example:
+   rmiregistry 2022
+
+2. server cannot find the remote interface .class files
+(or the rmic-generated _Stub file(s) if you used rmic, the
+rmi compiler).  In this case, you'll get a
+java.lang.ClassNotFoundException when trying to start the server.
+
+Check that your CLASSPATH is set and exported for the rmiregistry,
+the server, and the client.
